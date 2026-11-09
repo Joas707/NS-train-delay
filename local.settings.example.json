@@ -1,0 +1,23 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "LOCAL_STATE_FILE": ".state.json",
+
+    "FROM_STATION": "ASD",
+    "TO_STATION": "RTD",
+    "VIA_STATION": "UT",
+    "ARRIVAL_BUFFER_MIN": "15",
+    "DELAY_THRESHOLD_MIN": "5",
+
+    "NS_API_KEY": "<NS API-sleutel>",
+
+    "SLACK_BOT_TOKEN": "xoxb-...",
+    "SLACK_USER_ID": "U0123456789",
+
+    "MS_CLIENT_ID": "<Entra app-id>",
+    "MS_TENANT": "organizations",
+    "MS_REFRESH_TOKEN": "<uitkomst van get_refresh_token.py>"
+  }
+}
