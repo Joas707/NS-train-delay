@@ -4,6 +4,7 @@
     "FUNCTIONS_WORKER_RUNTIME": "python",
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "LOCAL_STATE_FILE": ".state.json",
+    "STATE_STORAGE_CONNECTION": "<storage account connection string, cloud only; leave out locally>",
 
     "FROM_STATION": "ASD",
     "TO_STATION": "RTD",

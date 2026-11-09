@@ -30,13 +30,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install dependencies into the deployment package
-        run: pip install -r requirements.txt --target=".python_packages/lib/site-packages"
-
       - name: Sign in to Azure (OIDC)
         uses: azure/login@v2
         with:
@@ -49,3 +42,4 @@ jobs:
         with:
           app-name: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
           package: .
+          remote-build: true   # Flex Consumption builds requirements.txt on Azure

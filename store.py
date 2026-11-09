@@ -5,7 +5,9 @@ import os
 
 class Store:
     def __init__(self):
-        conn = os.environ.get("AzureWebJobsStorage", "")
+        # Flex Consumption has no AzureWebJobsStorage connection string (it uses identity-based
+        # access), so the state table gets its own setting. AzureWebJobsStorage is a fallback.
+        conn = os.environ.get("STATE_STORAGE_CONNECTION") or os.environ.get("AzureWebJobsStorage", "")
         self._path = os.environ.get("LOCAL_STATE_FILE")
         if conn and not conn.startswith("UseDevelopmentStorage") and not self._path:
             from azure.data.tables import TableClient  # only needed in the cloud

@@ -23,7 +23,10 @@ Note: the Slack messages are in Dutch.
    `MS_CLIENT_ID=<app-id> python get_refresh_token.py` and put the result in `MS_REFRESH_TOKEN`.
 5. **Azure**: create a Function App (Python 3.11+, Flex Consumption or Consumption, Linux) with a
    storage account. Set all values from `local.settings.example.json` as Application settings
-   (see also the GitHub Actions section below for deploying).
+   (see also the GitHub Actions section below for deploying). Also add `STATE_STORAGE_CONNECTION`
+   with the connection string of the storage account (Storage account, Security + networking,
+   Access keys): Flex Consumption has no `AzureWebJobsStorage` connection string, and the app needs
+   one to keep its state between the evening and morning runs.
 
 ## Testing locally
 
