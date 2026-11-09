@@ -1,4 +1,4 @@
-"""Instellingen, gelezen uit omgevingsvariabelen (Azure: Application settings)."""
+"""Settings, read from environment variables (Azure: Application settings)."""
 import os
 from dataclasses import dataclass
 from zoneinfo import ZoneInfo
@@ -8,20 +8,20 @@ TZ = ZoneInfo("Europe/Amsterdam")
 
 @dataclass
 class Settings:
-    from_station: str            # NS-stationscode van je vertrekstation, bijv. "ASD"
-    to_station: str              # NS-stationscode van je bestemming, bijv. "RTD"
-    via_station: str = "UT"      # route voor het alternatief (Utrecht Centraal)
-    arrival_buffer_min: int = 15 # minuten tussen aankomst op station en start afspraak
-    delay_threshold_min: int = 5 # vanaf hoeveel minuten vertraging je een bericht krijgt
-    realert_step_min: int = 3    # nieuw bericht als de vertraging met zoveel minuten verandert
-    prewindow_min: int = 90      # begin met monitoren zoveel minuten voor het alternatief
+    from_station: str             # NS station code of your departure station, e.g. "ASD"
+    to_station: str               # NS station code of your destination, e.g. "RTD"
+    via_station: str = "UT"       # via station for the fallback route (Utrecht Centraal)
+    arrival_buffer_min: int = 15  # minutes between arriving at the station and the event start
+    delay_threshold_min: int = 5  # alert once the delay reaches this many minutes
+    realert_step_min: int = 3     # send a new alert when the delay changes by this many minutes
+    prewindow_min: int = 90       # start monitoring this many minutes before the fallback train
 
     @staticmethod
     def load() -> "Settings":
         def need(name):
             v = os.environ.get(name)
             if not v:
-                raise RuntimeError(f"Omgevingsvariabele {name} ontbreekt")
+                raise RuntimeError(f"Environment variable {name} is missing")
             return v
 
         return Settings(

@@ -1,4 +1,4 @@
-"""Kleine key-value opslag: Azure Table Storage in de cloud, JSON-bestand lokaal."""
+"""Small key-value store: Azure Table Storage in the cloud, a JSON file locally."""
 import json
 import os
 
@@ -8,15 +8,15 @@ class Store:
         conn = os.environ.get("AzureWebJobsStorage", "")
         self._path = os.environ.get("LOCAL_STATE_FILE")
         if conn and not conn.startswith("UseDevelopmentStorage") and not self._path:
-            from azure.data.tables import TableClient  # alleen in de cloud nodig
+            from azure.data.tables import TableClient  # only needed in the cloud
 
-            self._table = TableClient.from_connection_string(conn, "treinstate")
+            self._table = TableClient.from_connection_string(conn, "trainstate")
             self._table.create_table_if_not_exists()
         else:
             self._table = None
             self._path = self._path or ".state.json"
 
-    # --- bestand
+    # --- file backend
     def _load(self):
         try:
             with open(self._path) as f:
@@ -28,7 +28,7 @@ class Store:
         with open(self._path, "w") as f:
             json.dump(data, f)
 
-    # --- api
+    # --- public API
     def get(self, key):
         if self._table is None:
             return self._load().get(key)

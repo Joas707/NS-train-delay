@@ -1,4 +1,4 @@
-"""Dunne wrappers rond NS API, Microsoft Graph (Outlook) en Slack."""
+"""Thin wrappers around the NS API, Microsoft Graph (Outlook) and Slack."""
 import os
 from datetime import datetime, timedelta
 
@@ -46,12 +46,13 @@ def _graph_token(store) -> str:
     )
     r.raise_for_status()
     tok = r.json()
-    if tok.get("refresh_token"):  # Microsoft roteert refresh tokens
+    if tok.get("refresh_token"):  # Microsoft rotates refresh tokens
         store.set("graph_refresh_token", tok["refresh_token"])
     return tok["access_token"]
 
 
 def _parse_graph_dt(s: str) -> datetime:
+    # Graph returns naive local times like "2026-11-10T09:00:00.0000000".
     return datetime.fromisoformat(s.split(".")[0]).replace(tzinfo=TZ)
 
 
@@ -75,6 +76,7 @@ def make_first_event_getter(store):
             timeout=15,
         )
         r.raise_for_status()
+        # First event that is a real commitment: skip all-day, cancelled, declined and "free" events.
         for ev in r.json().get("value", []):
             if ev.get("isAllDay") or ev.get("isCancelled"):
                 continue
@@ -95,9 +97,9 @@ def slack_post(text: str) -> None:
     r = requests.post(
         "https://slack.com/api/chat.postMessage",
         headers={"Authorization": f"Bearer {os.environ['SLACK_BOT_TOKEN']}"},
-        json={"channel": os.environ["SLACK_USER_ID"], "text": text},
+        json={"channel": os.environ["SLACK_USER_ID"], "text": text},  # posting to a user ID sends a DM
         timeout=15,
     )
     r.raise_for_status()
     if not r.json().get("ok"):
-        raise RuntimeError(f"Slack-fout: {r.json().get('error')}")
+        raise RuntimeError(f"Slack error: {r.json().get('error')}")

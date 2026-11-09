@@ -1,7 +1,7 @@
-"""Kernlogica: avondplanning en ochtendmonitor.
+"""Core logic: evening planning and morning monitoring.
 
-Alles hier is puur (geen netwerk): NS, agenda, Slack en opslag worden als
-functies meegegeven, zodat het testbaar is.
+Everything here is pure (no network): NS, the calendar, Slack and storage are
+passed in as functions, which keeps it easy to test.
 """
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -10,11 +10,12 @@ from config import TZ, Settings
 
 
 def _dt(s: str) -> datetime:
-    # NS levert bijv. "2026-11-10T07:12:00+0100"; Python >= 3.11 leest dat.
+    # NS returns e.g. "2026-11-10T07:12:00+0100"; Python >= 3.11 parses that.
     return datetime.fromisoformat(s).astimezone(TZ)
 
 
 def _is_hsl(leg: dict) -> bool:
+    """True if the leg is a high-speed train (Intercity direct)."""
     p = leg.get("product") or {}
     name = (p.get("longCategoryName") or "").lower()
     return "direct" in name or p.get("shortCategoryName") == "ICD" or p.get("categoryCode") == "ICD"
@@ -66,12 +67,12 @@ def _hhmm(iso: str) -> str:
     return datetime.fromisoformat(iso).astimezone(TZ).strftime("%H:%M")
 
 
-# ---------------------------------------------------------------- avond
+# --------------------------------------------------------------- evening
 
 def plan_evening(s: Settings, get_trips, event: dict) -> dict | None:
-    """Kies voor de eerste afspraak van morgen de HSL-trein en een alternatief via Utrecht.
+    """Pick the HSL train and a fallback via Utrecht for tomorrow's first event.
 
-    get_trips(from, to, when, arrival, via) -> lijst ruwe NS-trips.
+    get_trips(from, to, when, arrival, via) -> list of raw NS trips.
     event = {"subject": str, "start": datetime}
     """
     deadline = event["start"] - timedelta(minutes=s.arrival_buffer_min)
@@ -86,6 +87,7 @@ def plan_evening(s: Settings, get_trips, event: dict) -> dict | None:
     direct_raw = get_trips(s.from_station, s.to_station, deadline, True, None)
     alt_raw = get_trips(s.from_station, s.to_station, deadline, True, s.via_station)
 
+    # Prefer the HSL; if none arrives in time, fall back to any train.
     primary = usable(direct_raw, True) or usable(direct_raw, None)
     if primary is None:
         return None
@@ -106,6 +108,7 @@ def plan_evening(s: Settings, get_trips, event: dict) -> dict | None:
 
 
 def evening_message(plan: dict) -> str:
+    # Slack messages are intentionally in Dutch (the user reads them).
     p, a = plan["primary"], plan["alt"]
     kind = "HSL (Intercity direct)" if p["hsl"] else "trein"
     lines = [
@@ -133,15 +136,15 @@ def run_evening(s, store, get_trips, get_first_event, post, now):
              "maar ik vond geen trein die op tijd aankomt. Kijk zelf even in de NS-app.")
         return None
     store.set("plan", plan)
-    store.delete("alert")
+    store.delete("alert")  # reset the alert state for the new day
     post(evening_message(plan))
     return plan
 
 
-# --------------------------------------------------------------- ochtend
+# --------------------------------------------------------------- morning
 
 def assess(s: Settings, plan: dict, raw_trips: list) -> dict | None:
-    """Zoek de geplande trein terug in de actuele reisinformatie en beoordeel hem."""
+    """Find the planned train in the live travel info and judge its status."""
     want_dep = datetime.fromisoformat(plan["primary"]["dep_planned"])
     want_nums = tuple(plan["primary"]["numbers"])
     deadline = datetime.fromisoformat(plan["deadline"])
@@ -154,7 +157,7 @@ def assess(s: Settings, plan: dict, raw_trips: list) -> dict | None:
             if t.delay_min >= s.delay_threshold_min or late:
                 return {"level": "delay", "delay": t.delay_min, "arr": t.arr_actual}
             return {"level": "ok", "delay": t.delay_min, "arr": t.arr_actual}
-    return None  # niet gevonden: geen alarm
+    return None  # not found: no alarm
 
 
 def alert_message(plan: dict, st: dict, now: datetime) -> str:
@@ -176,18 +179,18 @@ def alert_message(plan: dict, st: dict, now: datetime) -> str:
 def run_morning(s, store, get_trips, post, now):
     plan = store.get("plan")
     if not plan or plan["date"] != now.date().isoformat():
-        return "geen plan voor vandaag"
+        return "no plan for today"
 
     dep = datetime.fromisoformat(plan["primary"]["dep_planned"])
     first = datetime.fromisoformat(plan["alt"]["dep_planned"]) if plan["alt"] else dep
     first = min(first, dep)
     if not (first - timedelta(minutes=s.prewindow_min) <= now <= dep + timedelta(minutes=3)):
-        return "buiten monitorvenster"
+        return "outside monitoring window"
 
     raw = get_trips(s.from_station, s.to_station, dep - timedelta(minutes=10), False, None)
     st = assess(s, plan, raw)
     if st is None:
-        return "trein niet gevonden in reisinformatie"
+        return "train not found in travel info"
 
     prev = store.get("alert")
     prev = prev if prev and prev.get("date") == plan["date"] else None
@@ -199,6 +202,7 @@ def run_morning(s, store, get_trips, post, now):
             store.set("alert", {"date": plan["date"], "level": "ok", "delay": st["delay"]})
         return "ok"
 
+    # Only alert on a change, to avoid spamming every 2 minutes.
     changed = (prev is None or prev["level"] != st["level"]
                or abs(prev["delay"] - st["delay"]) >= s.realert_step_min)
     if changed:

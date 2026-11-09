@@ -1,4 +1,4 @@
-name: Deploy naar Azure Functions
+name: Deploy to Azure Functions
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write   # nodig voor inloggen bij Azure via OIDC
+  id-token: write   # required to sign in to Azure via OIDC
   contents: read
 
 env:
@@ -34,17 +34,17 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Afhankelijkheden installeren in het deploy-pakket
+      - name: Install dependencies into the deployment package
         run: pip install -r requirements.txt --target=".python_packages/lib/site-packages"
 
-      - name: Inloggen bij Azure (OIDC)
+      - name: Sign in to Azure (OIDC)
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Publiceren
+      - name: Publish
         uses: Azure/functions-action@v1
         with:
           app-name: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
