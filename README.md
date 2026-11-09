@@ -32,6 +32,24 @@ Note: the Slack messages are in Dutch.
 
 `python test_logic.py` runs the logic against fake data, with no keys or network needed.
 
+## Running it manually (HTTP trigger)
+
+Once deployed, the Function App also exposes `GET/POST /api/run/evening` and `/api/run/morning`,
+protected by a function key (Function App, *Functions*, *App keys*, copy the `default` key).
+
+```
+curl -H "x-functions-key: <key>" \
+  "https://<app-name>.azurewebsites.net/api/run/evening?dry_run=1"
+```
+
+- `dry_run=1`: nothing is sent to Slack and nothing is stored; the messages come back in the JSON
+  response instead. Leave it out to do a real run (sends the Slack message and stores the plan).
+- `now=2026-11-10T07:00`: pretend it is this Amsterdam time, e.g. to test the morning check after
+  an evening run. The morning check only acts inside its monitoring window and with a plan for
+  that day.
+
+Typical test: run `evening` for real (or dry), then `morning` with `now` set to tomorrow 07:00.
+
 ## Settings
 
 | Name | Default | Meaning |

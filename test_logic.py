@@ -83,4 +83,15 @@ assert morning(t(7, 10), ok, 1) == "ok"                         # recovered: mes
 assert morning(t(9, 30), ok, 0) == "outside monitoring window"  # after departure
 for p in posts[1:]:
     print(p, "\n")
+
+# OverlayStore: writes stay in memory, reads fall through, deletes mask the real value.
+from store import OverlayStore
+real = FakeStore(); real.set("a", 1)
+ov = OverlayStore(real)
+assert ov.get("a") == 1
+ov.set("a", 2); ov.set("b", 3)
+assert (ov.get("a"), ov.get("b")) == (2, 3) and real.get("a") == 1 and real.get("b") is None
+ov.delete("a")
+assert ov.get("a") is None and real.get("a") == 1
+
 print("All tests passed.")

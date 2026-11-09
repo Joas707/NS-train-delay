@@ -57,3 +57,26 @@ class Store:
                 self._table.delete_entity("s", key)
             except Exception:
                 pass
+
+
+_DELETED = object()
+
+
+class OverlayStore:
+    """Reads fall through to the real store; writes stay in memory (used for dry runs)."""
+
+    def __init__(self, real):
+        self._real = real
+        self._local = {}
+
+    def get(self, key):
+        if key in self._local:
+            v = self._local[key]
+            return None if v is _DELETED else v
+        return self._real.get(key)
+
+    def set(self, key, value):
+        self._local[key] = value
+
+    def delete(self, key):
+        self._local[key] = _DELETED
